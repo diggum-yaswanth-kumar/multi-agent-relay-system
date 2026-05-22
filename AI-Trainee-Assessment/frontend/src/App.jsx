@@ -189,7 +189,7 @@ export default function App() {
         role: 'agent',
         agent: 'Main Agent',
         agentRole: AGENT_ROLES['Main Agent'],
-        content: `Connection error: ${err.message}. Ensure the backend is running on port 8000.`,
+        content: `Connection error: ${err.message}. Unable to connect to backend service.`,
       })
     }
   }
