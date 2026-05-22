@@ -11,6 +11,9 @@ class OrchestrationPhase(str, Enum):
     BACKEND_PROCESSING = "backend_processing"
     CLARIFICATION = "clarification"
     CONTENT_GENERATION = "content_generation"
+    SYSTEM_ANALYSIS = "system_analysis"
+    BACKEND_GENERATION = "backend_generation"
+    FRONTEND_INTEGRATION = "frontend_integration"
     DELIVERY = "delivery"
     COMPLETED = "completed"
 
@@ -18,7 +21,7 @@ class OrchestrationPhase(str, Enum):
 class WorkflowManager:
     """Maintains relay workflow state, conversation history, and active agent."""
 
-    WORKFLOW_STEPS = [
+    CONTENT_WORKFLOW_STEPS = [
         {"id": "task_received", "label": "Task Received"},
         {"id": "relay_frontend", "label": "Relay to Frontend"},
         {"id": "backend_processing", "label": "Backend Processing"},
@@ -27,28 +30,78 @@ class WorkflowManager:
         {"id": "delivery", "label": "Delivery to User"},
     ]
 
+    SYSTEM_WORKFLOW_STEPS = [
+        {"id": "task_received", "label": "Task Received"},
+        {"id": "analysis", "label": "Requirement Analysis"},
+        {"id": "backend_generation", "label": "Backend API Generation"},
+        {"id": "frontend_integration", "label": "Frontend Integration"},
+        {"id": "orchestration", "label": "Orchestration Complete"},
+        {"id": "delivery", "label": "Final Delivery"},
+    ]
+
+    WORKFLOW_STEPS = CONTENT_WORKFLOW_STEPS
+
     def __init__(self):
         self._sessions: Dict[str, Dict[str, Any]] = {}
 
-    def create_session(self, user_prompt: str) -> str:
+    def create_session(
+        self, user_prompt: str, workflow_type: str = "content_generation"
+    ) -> str:
         session_id = str(uuid.uuid4())
+        steps_template = (
+            self.SYSTEM_WORKFLOW_STEPS
+            if workflow_type == "system_orchestration"
+            else self.CONTENT_WORKFLOW_STEPS
+        )
         self._sessions[session_id] = {
             "session_id": session_id,
             "user_prompt": user_prompt,
+            "workflow_type": workflow_type,
             "phase": OrchestrationPhase.TASK_RECEIVED.value,
             "active_agent": "Main Agent",
             "collected": {},
             "clarification_step": None,
             "conversation_history": [],
+            "communication_logs": [],
             "workflow_steps": [
-                {**step, "status": "pending"} for step in self.WORKFLOW_STEPS
+                {**step, "status": "pending"} for step in steps_template
             ],
+            "completed_tasks": [],
             "status": "active",
             "final_summary": None,
         }
         self._update_workflow_step(session_id, 0, "completed")
         self._update_workflow_step(session_id, 1, "active")
         return session_id
+
+    def log_communication(self, session_id: str, entry: Dict[str, Any]) -> None:
+        session = self._sessions.get(session_id)
+        if session:
+            session["communication_logs"].append(entry)
+            session["conversation_history"].append(
+                {"agent": entry["agent"], "message": entry["message"]}
+            )
+
+    def complete_task(self, session_id: str, task_label: str) -> None:
+        session = self._sessions.get(session_id)
+        if session and task_label not in session["completed_tasks"]:
+            session["completed_tasks"].append(task_label)
+
+    def advance_system_step(self, session_id: str, step_index: int, phase: OrchestrationPhase) -> None:
+        self.set_phase(session_id, phase)
+        for i in range(step_index):
+            self._update_workflow_step(session_id, i, "completed")
+        self._update_workflow_step(session_id, step_index, "active")
+
+    def mark_system_completed(self, session_id: str, final_summary: str = None) -> None:
+        session = self._sessions.get(session_id)
+        if session:
+            session["phase"] = OrchestrationPhase.COMPLETED.value
+            session["status"] = "completed"
+            session["active_agent"] = "Main Agent"
+            session["final_summary"] = final_summary
+            for i in range(len(session["workflow_steps"])):
+                self._update_workflow_step(session_id, i, "completed")
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         return self._sessions.get(session_id)

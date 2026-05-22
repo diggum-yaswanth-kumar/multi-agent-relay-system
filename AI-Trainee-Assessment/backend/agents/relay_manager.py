@@ -2,6 +2,8 @@
 
 from typing import Dict, Any, List, Optional
 
+from agents.message_builder import workflow_message, to_relay_chain
+
 
 class RelayManager:
     """
@@ -95,6 +97,63 @@ class RelayManager:
             ),
             self.entry(self.BACKEND, "Generating final content..."),
         ]
+
+    def build_system_orchestration_chain(
+        self,
+        backend_payload: Dict[str, Any],
+        frontend_payload: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Full simulated system-build workflow message chain."""
+        backend_msg = backend_payload.get("backend_message", "")
+        relay_followup = backend_payload.get("relay_followup", "")
+        frontend_intro = frontend_payload.get("frontend_message", "")
+        frontend_done = frontend_payload.get("completion_message", "")
+
+        messages = [
+            workflow_message(
+                self.MAIN,
+                "Task received.\nAnalyzing requirements...",
+                status="processing",
+                workflow_step=1,
+            ),
+            workflow_message(
+                self.MAIN,
+                "Delegating backend generation task...",
+                status="processing",
+                workflow_step=2,
+            ),
+            workflow_message(
+                self.BACKEND,
+                backend_msg,
+                status="processing",
+                workflow_step=3,
+            ),
+            workflow_message(
+                self.BACKEND,
+                relay_followup,
+                status="processing",
+                workflow_step=4,
+            ),
+            workflow_message(
+                self.FRONTEND,
+                frontend_intro,
+                status="processing",
+                workflow_step=5,
+            ),
+            workflow_message(
+                self.FRONTEND,
+                frontend_done,
+                status="processing",
+                workflow_step=6,
+            ),
+            workflow_message(
+                self.MAIN,
+                "Workflow orchestration completed successfully.",
+                status="completed",
+                workflow_step=7,
+            ),
+        ]
+        return messages
 
     def append_to_history(
         self, session: Dict[str, Any], messages: List[Dict[str, str]]

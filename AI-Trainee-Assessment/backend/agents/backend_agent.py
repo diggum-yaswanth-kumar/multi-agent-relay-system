@@ -37,6 +37,11 @@ class BackendAgent:
         },
     }
 
+    SYSTEM_BUILD_PATTERNS = [
+        r"\b(build|create|develop)\b.*\b(system|platform|application)\b",
+        r"\bblog\s+generation\s+system\b",
+    ]
+
     TASK_PATTERNS = {
         "blog": r"\b(blog|post|write\s+about)\b",
         "article": r"\b(article|piece|publish)\b",
@@ -171,6 +176,94 @@ class BackendAgent:
                 "generation_source": "openai",
             },
         }
+
+    def simulate_backend_generation(
+        self, user_message: str, session_id: str
+    ) -> Dict[str, Any]:
+        """Simulate backend API creation for system orchestration workflows."""
+        system_name = self._extract_system_name(user_message)
+        endpoints = [
+            {
+                "method": "POST",
+                "path": "/generate-blog",
+                "description": "Generate blog content from topic and parameters",
+            },
+            {
+                "method": "POST",
+                "path": "/workflow-status",
+                "description": "Return active multi-agent workflow status",
+            },
+            {
+                "method": "GET",
+                "path": "/api/health",
+                "description": "Service health and agent availability check",
+            },
+        ]
+        api_contract = {
+            "system_name": system_name,
+            "base_url": "http://127.0.0.1:8000",
+            "endpoints": endpoints,
+        }
+        endpoint_lines = "\n".join(
+            f"- {ep['method']} {ep['path']}" for ep in endpoints[:2]
+        )
+        backend_message = (
+            "Backend APIs generated successfully.\n\n"
+            f"Generated endpoints:\n{endpoint_lines}"
+        )
+        return {
+            "status": "backend_ready",
+            "session_id": session_id,
+            "system_name": system_name,
+            "api_contract": api_contract,
+            "backend_message": backend_message,
+            "relay_followup": "Sending API contract to Frontend Agent...",
+            "metadata": {
+                "step": "backend_generation",
+                "endpoints": endpoints,
+            },
+        }
+
+    def build_system_deliverable(
+        self, user_message: str, api_contract: Dict[str, Any], integration: Dict[str, Any]
+    ) -> str:
+        """Produce final orchestration summary for system build workflows."""
+        name = api_contract.get("system_name", "Application System")
+        endpoints = api_contract.get("endpoints", [])
+        endpoint_block = "\n".join(
+            f"  - `{e['method']} {e['path']}` — {e['description']}"
+            for e in endpoints
+        )
+        components = integration.get("integrated_components", [])
+        component_block = "\n".join(f"  - {c}" for c in components)
+
+        return (
+            f"# {name} — Orchestration Deliverable\n\n"
+            f"## Original Request\n{user_message}\n\n"
+            f"## Backend APIs (Simulated)\n{endpoint_block}\n\n"
+            f"## Frontend Integration (Simulated)\n{component_block}\n\n"
+            f"## Orchestration Status\n"
+            f"- Main Agent: Workflow orchestration completed\n"
+            f"- Backend Agent: API layer provisioned\n"
+            f"- Frontend Agent: UI components wired to backend\n\n"
+            f"## Next Steps\n"
+            f"Deploy backend with `uvicorn main:app --reload` and frontend with `npm run dev`.\n"
+            f"Use POST /api/agent/start to trigger content workflows.\n"
+        )
+
+    def _extract_system_name(self, message: str) -> str:
+        lower = message.lower()
+        if "blog" in lower and "system" in lower:
+            return "Blog Generation System"
+        match = re.search(
+            r"(?:build|create|develop)\s+(?:a\s+)?(.+?)(?:\.|$)",
+            message,
+            re.IGNORECASE,
+        )
+        if match:
+            name = match.group(1).strip().title()
+            return name[:80] if name else "Custom Application System"
+        return "Multi-Agent Application System"
 
     def _error(self, message: str) -> Dict[str, Any]:
         return {"status": "error", "message": message}

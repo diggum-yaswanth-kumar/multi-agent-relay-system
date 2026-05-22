@@ -17,7 +17,7 @@ from services.llm_service import LLMService
 app = FastAPI(
     title="AI Agent Communication System",
     description="Conversational multi-agent relay orchestration platform",
-    version="3.0.0",
+    version="4.0.0",
 )
 
 app.add_middleware(
@@ -41,8 +41,9 @@ async def root():
     return {
         "service": "AI Agent Communication System",
         "status": "operational",
-        "architecture": "Conversational Multi-Agent Relay",
-        "flow": "User → Main → Frontend → Backend → Frontend → Main → User",
+        "architecture": "Multi-Agent Workflow Orchestration",
+        "flow": "User → Main → Frontend → Backend → [GPT-4o-mini] → Frontend → Main → User",
+        "workflows": ["system_orchestration", "content_generation"],
         "agents": ["Main Agent", "Frontend Agent", "Backend Agent"],
         "endpoints": {
             "start": "POST /api/agent/start",

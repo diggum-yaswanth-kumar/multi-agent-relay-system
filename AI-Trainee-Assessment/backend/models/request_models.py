@@ -14,6 +14,15 @@ class RespondRequest(BaseModel):
     value: str = Field(..., min_length=1, description="User's answer to clarification question")
 
 
+class WorkflowMessage(BaseModel):
+    """Structured multi-agent workflow communication message."""
+    agent: str
+    message: str
+    status: str = "processing"
+    workflow_step: int = 1
+    direction: Optional[str] = "relay"
+
+
 class OrchestrationLogEntry(BaseModel):
     agent: str
     message: str
@@ -40,6 +49,8 @@ class AgentResponse(BaseModel):
     routing_log: Optional[str] = None
     orchestration_logs: Optional[List[Dict[str, str]]] = None
     relay_messages: Optional[List[Dict[str, str]]] = None
+    workflow_messages: Optional[List[Dict[str, Any]]] = None
+    communication_logs: Optional[List[Dict[str, Any]]] = None
     conversation_history: Optional[List[Dict[str, str]]] = None
     orchestration_summary: Optional[str] = None
     workflow_phase: Optional[str] = None
